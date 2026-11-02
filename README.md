@@ -58,6 +58,10 @@ Všechny volby jsou v `config.json` (viz `config.example.json`). Důležité:
 - API klíče si každý uživatel pořizuje sám (zdarma).
 - Nikdy nesdílejte svůj `config.json`.
 
+## Upozornění k použití
+
+Tento nástroj je určen pro **zálohování vlastních DVD**, která vlastníte. Respektujte autorská práva a místní zákony – nepoužívejte jej k šíření chráněného obsahu. MakeMKV/HandBrake používejte v souladu s jejich licenčními podmínkami.
+
 ## Licence
 
 Používejte v souladu s podmínkami MakeMKV/HandBrake a autorskými právy k médiím.
