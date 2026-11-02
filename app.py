@@ -21,7 +21,8 @@ CFG = {
     "omdb_key": "",             # API klíč z omdbapi.com (zdarma)
     "tmdb_lang": "cs-CZ",
     "ha_webhook": "",           # např. http://homeassistant.local:8123/api/webhook/dvd_rip
-    "jellyfin_url": "",         # např. http://192.168.1.50:8096
+    "ha_url": "",               # např. http://homeassistant.local:8123
+    "ha_token": "",             # long-lived access token (HA → profil → security)    "jellyfin_url": "",         # např. http://192.168.1.50:8096
     "jellyfin_key": "",         # API klíč: Jellyfin → Dashboard → API Keys
     "port": 8080,
     "debug": True,            # zobrazit /debug a /api/debug s chybami a logy
@@ -80,6 +81,31 @@ def refresh_jellyfin():
         pass
 
 
+def ha_set_state(job):
+    if not (CFG.get("ha_url") and CFG.get("ha_token")):
+        return
+    try:
+        url = CFG["ha_url"].rstrip("/") + "/api/states/sensor.dvd_autorip"
+        payload = {
+            "state": job.get("status"),
+            "attributes": {
+                "friendly_name": "DVD AutoRip",
+                "title": job.get("title"),
+                "disc": job.get("label"),
+                "progress": job.get("progress"),
+                "error": job.get("error"),
+                "kids": job.get("kids"),
+                "unit_of_measurement": "%",
+            },
+        }
+        req = urllib.request.Request(url, json.dumps(payload).encode(),
+                                    {"Authorization": f"Bearer {CFG['ha_token']}",
+                                     "Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=10)
+    except Exception:
+        pass
+
+
 def guess_title(label):
     q = re.sub(r"[_.]+", " ", label)
     q = re.sub(r"\b(disc|disk|dvd|cd)\s*\d*\b", "", q, flags=re.I).strip().title()
@@ -132,6 +158,7 @@ def guess_title(label):
 def fail(job, e):
     job["status"], job["error"] = "error", str(e)
     dlog(f"fail job={job.get('id')} label={job.get('label')}: {e}", job=job.get("id"))
+    ha_set_state(job)
     notify(f"Chyba u disku {job['label']}: {e}")
 
 
@@ -172,6 +199,7 @@ def rip(label):
     job["work"] = str(work)
     try:
         job["title"], job["kids"] = guess_title(label)
+        ha_set_state(job)
         if CFG.get("dynamic_minlength"):
             minlength = dynamic_minlength()
         else:
@@ -198,6 +226,7 @@ def rip(label):
         if not list(work.glob("*.mkv")):
             raise RuntimeError("Na disku není titul delší než minimální délka")
         job["status"], job["progress"] = "queued", 0
+        ha_set_state(job)
         enc_q.put(job)
     except Exception as e:
         fail(job, e)
@@ -222,6 +251,7 @@ def encoder():
     while True:
         job = enc_q.get()
         job["status"], job["progress"] = "encode", 0
+        ha_set_state(job)
         try:
             src = max(Path(job["work"]).glob("*.mkv"), key=lambda f: f.stat().st_size)  # hlavní film
             name = re.sub(r'[<>:"/\\|?*]', "", job["title"]).strip()
@@ -244,6 +274,7 @@ def encoder():
                 raise RuntimeError("HandBrake skončil s chybou")
             shutil.rmtree(job["work"], ignore_errors=True)
             job["status"], job["progress"] = "done", 100
+            ha_set_state(job)
             refresh_jellyfin()
             notify(f"Hotovo: {name}")
         except Exception as e:

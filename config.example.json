@@ -12,6 +12,8 @@
   "omdb_key": "YOUR_OMDB_API_KEY",
   "tmdb_lang": "cs-CZ",
   "ha_webhook": "",
+  "ha_url": "",
+  "ha_token": "",
   "jellyfin_url": "",
   "jellyfin_key": "",
   "port": 8080,

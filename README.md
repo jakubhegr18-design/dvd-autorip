@@ -58,6 +58,26 @@ Všechny volby jsou v `config.json` (viz `config.example.json`). Důležité:
 - API klíče si každý uživatel pořizuje sám (zdarma).
 - Nikdy nesdílejte svůj `config.json`.
 
+## Integrace s Home Assistantem
+
+Aplikace podporuje dvě varianty:
+
+1. **Webhook (jednoduché)** – nastavte `ha_webhook` na URL webhooku v HA (např. `http://homeassistant.local:8123/api/webhook/dvd_rip`). Při dokončení/chybě se odešle zpráva.
+2. **REST API (senzor)** – nastavte `ha_url` (např. `http://homeassistant.local:8123`) a `ha_token` (long-lived access token z HA profilu). Aplikace aktualizuje entitu `sensor.dvd_autorip` (stav + atributy: title, disc, progress, error, kids).
+
+Příklad automatizace (webhook) v HA:
+```yaml
+automation:
+  - alias: "DVD rip hotov"
+    trigger:
+      - platform: webhook
+        webhook_id: dvd_rip
+    action:
+      - service: notify.mobile_app
+        data:
+          message: "{{ trigger.json.message }}"
+```
+
 ## Upozornění k použití
 
 Tento nástroj je určen pro **zálohování vlastních DVD**, která vlastníte. Respektujte autorská práva a místní zákony – nepoužívejte jej k šíření chráněného obsahu. MakeMKV/HandBrake používejte v souladu s jejich licenčními podmínkami.
